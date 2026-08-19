@@ -4,13 +4,51 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(
+    AppModule
+  );
 
   app.setGlobalPrefix("api");
 
+  const allowedOrigins = [
+    "http://localhost:3000",
+    process.env.FRONTEND_URL,
+  ].filter(
+    (origin): origin is string =>
+      Boolean(origin)
+  );
+
   app.enableCors({
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    origin(
+      origin,
+      callback
+    ) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(
+        new Error(
+          `Origin ${origin} is not allowed by CORS`
+        )
+      );
+    },
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
     credentials: true,
   });
 
@@ -22,12 +60,14 @@ async function bootstrap() {
     })
   );
 
-  const port = process.env.PORT ?? 4000;
+  const port = Number(
+    process.env.PORT ?? 4000
+  );
 
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
 
   console.log(
-    `HONEYSTORE API running at http://localhost:${port}/api`
+    `HONEYSTORE API running on port ${port}`
   );
 }
 
